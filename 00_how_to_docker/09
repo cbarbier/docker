@@ -1,0 +1,3 @@
+apt update
+apt dist-upgrade
+apt install -y gcc git
