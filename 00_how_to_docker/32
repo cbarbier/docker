@@ -1,0 +1,1 @@
+docker container rm -f 682f17745b21
