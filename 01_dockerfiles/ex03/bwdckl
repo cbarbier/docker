@@ -1,0 +1,27 @@
+FROM debian
+
+ENV GOPATH /go
+
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y git golang mariadb-server nginx
+
+RUN adduser --disabled-login --gecos 'Gogs' git
+RUN mkdir -p $GOPATH/src/github.com/gogits
+WORKDIR $GOPATH/src/github.com/gogits
+RUN git clone --depth=1 -b develop https://github.com/gogits/gogs
+WORKDIR $GOPATH/src/github.com/gogits/gogs
+RUN go build
+RUN mkdir -p custom/conf
+RUN echo '[server]\nSTART_SSH_SERVER = true\nSSH_PORT = 2222\n' > custom/conf/app.ini
+
+RUN chown -R git:git .
+RUN /etc/init.d/mysql start && \
+	mysql < scripts/mysql.sql && \
+	mysql -e "UPDATE mysql.user SET plugin='mysql_native_password' WHERE User='root';"
+	RUN sed -i 's|try_files $uri $uri/ =404;|proxy_pass http://localhost:3000;\n\t\tproxy_redirect http://localhost:3000/ http://$http_host/;|' \
+	/etc/nginx/sites-available/default
+
+EXPOSE 2222 80
+CMD /etc/init.d/mysql start && \
+	/etc/init.d/nginx start && \
+	su git -c "$GOPATH/src/github.com/gogits/gogs/gogs web"
